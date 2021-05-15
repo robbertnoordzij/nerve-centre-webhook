@@ -5,5 +5,5 @@ Simple webhook to Slack to push the schedule defined in Nerve Centre
 
 ```bash
 docker build -t nerve-centre-webhook:latest .
-docker run nerve-centre-webhook:latest -username <<nerve-centre-username>> -password <<nerve-centre-password>> --webhook <<slack-webhook-url>>
+docker run nerve-centre-webhook:latest -username "<<nerve-centre-username>>" -password "<<nerve-centre-password>>" --webhook "<<slack-webhook-url>>"
 ```
