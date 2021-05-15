@@ -1,178 +1,120 @@
 package main
 
 import (
-	"crypto/tls"
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
-	"net/http/cookiejar"
-	"net/url"
+	"errors"
+	"flag"
+	"strconv"
 	"strings"
 	"time"
 )
 
-const nerveCentreBaseUrl = "https://portal.ncaas.nl/2020-2"
+func main() {
 
-type User struct {
-	Id   string
-	Name string
-}
+	username := flag.String("username", "", "Nerve Centre username")
+	password := flag.String("password", "", "Nerve Centre password")
+	webhookUrl := flag.String("webhook", "", "Slack webhook url")
+	flag.Parse()
 
-type Schedule struct {
-	GroupId     string
-	ParameterId string
-	GroupName   string
-}
+	InitializeClient()
 
-type Slot struct {
-	Start   time.Time
-	End     time.Time
-	Members []string
-}
+	err := Login(*username, *password)
 
-type Planning struct {
-	BaseTimeSlots    []Slot
-	PrimaryTimeSlots []Slot
-}
-
-var client *http.Client
-
-func InitializeClient() {
-	jar, _ := cookiejar.New(nil)
-	client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: 10 * time.Second,
-		Jar:     jar,
-	}
-}
-
-func Login(username string, password string) error {
-
-	if len(username) == 0 || len(password) == 0 {
-		return fmt.Errorf("username or password is not provided")
+	if err != nil {
+		panic(err)
 	}
 
-	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/login.cshtml", nil)
-	client.Do(req)
+	users := GetUsers()
+	schedules := *GetSchedules()
 
-	form := url.Values{}
-	form.Add("username", username)
-	form.Add("password", password)
-
-	req, _ = http.NewRequest("POST", nerveCentreBaseUrl+"/login.cshtml?ReturnUrl=~%2f", strings.NewReader(form.Encode()))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, _ := client.Do(req)
-
-	if resp.StatusCode != 200 {
-		return fmt.Errorf("failed to login, Nerve Centre returned %d", resp.StatusCode)
+	if len(*users) == 0 || len(schedules) == 0 {
+		panic(errors.New("could not load users or schedules, check username and password"))
 	}
 
-	return nil
-}
+	schedule := schedules[0]
 
-func GetUsers() *[]User {
-	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/um/controller/1.0/users", nil)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
+	planningTime := time.Now()
+	planningEnd := time.Now()
+	planning := GetPlanning(schedule, planningTime)
+	today := planning
+	var next *Planning
+	currentPlanningEnd := planning.GetEnd()
+	todayMembers := today.GetMembers(users)
 
-	resp, _ := client.Do(req)
+	foundOther := false
 
-	body, _ := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
+	for planning.HasMembers() {
+		planningEnd = planning.GetEnd()
 
-	var users []User
+		if !foundOther {
+			members := planning.GetMembers(users)
 
-	json.Unmarshal(body, &users)
-
-	return &users
-}
-
-func GetSchedules() *[]Schedule {
-	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/reachability/controller/1.0/groups/config/schedules", nil)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-
-	resp, _ := client.Do(req)
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-
-	var schedules []Schedule
-
-	json.Unmarshal(body, &schedules)
-
-	return &schedules
-}
-
-func GetPlanning(schedule Schedule, date time.Time) *Planning {
-	dateString := date.Format("2006-01-02")
-
-	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/reachability/controller/1.0/groups/"+schedule.GroupId+"/config/"+schedule.ParameterId+"/schedule/"+dateString, nil)
-	req.Header.Set("Accept", "application/json, text/plain, */*")
-
-	resp, _ := client.Do(req)
-
-	body, _ := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-
-	var planning Planning
-
-	json.Unmarshal(body, &planning)
-
-	return &planning
-}
-
-
-func (planning *Planning) HasMembers() bool {
-
-	for _, slot := range planning.BaseTimeSlots {
-		if len(slot.Members) > 0 {
-			return true
+			if !Equal(todayMembers, members) {
+				foundOther = true
+				next = planning
+			} else {
+				currentPlanningEnd = planning.GetEnd()
+			}
 		}
+
+		planningTime = planningTime.Add(24 * time.Hour)
+		planning = GetPlanning(schedule, planningTime)
 	}
 
-	return false
-}
+	todayMembersString := "<<geen>>"
+	todayColor := "#ec0045"
+	if len(todayMembers) > 0 {
+		todayMembersString = strings.Join(todayMembers, ", ") + " tot " + currentPlanningEnd.Format("02-01-2006 15:04")
+		todayColor = "#007a5a"
+	}
 
-func (planning *Planning) GetEnd() time.Time {
-	var end time.Time
+	attachments := make([]Attachment, 0, 3)
 
-	for _, slot := range planning.BaseTimeSlots {
-		if len(slot.Members) > 0 {
-			end = slot.End
+	attachments = append(attachments, Attachment{
+		Fallback: "Vandaag: " + todayMembersString,
+		Color:    todayColor,
+		Title:    "Vandaag",
+		Text:     todayMembersString,
+	})
+
+	if foundOther {
+		nextMembers := next.GetMembers(users)
+		nextMembersString := "<<geen>>"
+		nextColor := "#ec0045"
+
+		if len(todayMembers) > 0 {
+			nextMembersString = strings.Join(nextMembers, ", ")
+			nextColor = "#ffc917"
 		}
+
+		attachments = append(attachments, Attachment{
+			Fallback: "Volgende: " + nextMembersString,
+			Color:    nextColor,
+			Title:    "Volgende",
+			Text:     nextMembersString,
+			Ts:       json.Number(strconv.FormatInt(next.GetStart().Unix(), 10)),
+		})
 	}
 
-	return end
-}
-
-func (planning *Planning) GetStart() time.Time {
-	return planning.BaseTimeSlots[0].Start
-}
-
-func (planning *Planning) GetMembers(users *[]User) []string {
-	index := make(map[string]string)
-
-	for _, user := range *users {
-		index[user.Id] = user.Name
+	if today.HasMembers() {
+		attachments = append(attachments, Attachment{
+			Fallback: "Er is een rooster tot " + planningEnd.Format("02-01-2006 15:04"),
+			Color:    "#ec0045",
+			Title:    "Einde rooster",
+			Text:     "Er is een rooster tot " + planningEnd.Format("02-01-2006 15:04"),
+			Ts:       json.Number(strconv.FormatInt(planningEnd.Unix(), 10)),
+		})
 	}
 
-	members := make(map[string]struct{})
-
-	for _, slot := range planning.BaseTimeSlots {
-
-		for _, member := range slot.Members {
-			members[index[member]] = struct{}{}
-		}
+	message := SlackPayload{
+		Username:    "📞 Wachtdienst " + schedule.GroupName,
+		Text:        "Een overzicht van de de huidige wachtdiensten die zijn ingeregeld voor " + schedule.GroupName + " in Nerve Centre",
+		Attachments: attachments,
 	}
 
-	keys := make([]string, 0, len(members))
+	err = SendSlack(*webhookUrl, &message)
 
-	for key, _ := range members {
-		keys = append(keys, key)
+	if err != nil {
+		panic(err)
 	}
-
-	return keys
 }

@@ -1,3 +1,3 @@
-module github.com/robbertnoordzij/nerve-center-webhook
+module github.com/robbertnoordzij/nerve-centre-webhook
 
 go 1.16
