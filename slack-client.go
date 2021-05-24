@@ -34,6 +34,12 @@ type SlackPayload struct {
 	Attachments []Attachment `json:"attachments,omitempty"`
 }
 
+var slackHttpClient http.Client
+
+func init() {
+	slackHttpClient = *http.DefaultClient
+}
+
 func SendSlack(webhook string, payload *SlackPayload) error {
 	if len(webhook) == 0 {
 		return fmt.Errorf("no webhook url was provided")
@@ -42,11 +48,11 @@ func SendSlack(webhook string, payload *SlackPayload) error {
 	body, _ := json.Marshal(payload)
 
 	req, _ := http.NewRequest("POST", webhook, bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Content-Type", "application/json")
 
-	resp, _ := client.Do(req)
+	resp, _ := slackHttpClient.Do(req)
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("could not send slack notification, service returned %d", resp.StatusCode)
 	}
 

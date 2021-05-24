@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const nerveCentreBaseUrl = "https://portal.ncaas.nl/2020-2"
+var nerveCentreBaseUrl = "https://portal.ncaas.nl/2020-2"
 
 type User struct {
 	Id   string
@@ -36,11 +36,11 @@ type Planning struct {
 	PrimaryTimeSlots []Slot
 }
 
-var client *http.Client
+var nerveCentreHttpClient *http.Client
 
-func InitializeClient() {
+func init() {
 	jar, _ := cookiejar.New(nil)
-	client = &http.Client{
+	nerveCentreHttpClient = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
@@ -56,7 +56,7 @@ func Login(username string, password string) error {
 	}
 
 	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/login.cshtml", nil)
-	client.Do(req)
+	nerveCentreHttpClient.Do(req)
 
 	form := url.Values{}
 	form.Add("username", username)
@@ -65,9 +65,9 @@ func Login(username string, password string) error {
 	req, _ = http.NewRequest("POST", nerveCentreBaseUrl+"/login.cshtml?ReturnUrl=~%2f", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, _ := client.Do(req)
+	resp, _ := nerveCentreHttpClient.Do(req)
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("failed to login, Nerve Centre returned %d", resp.StatusCode)
 	}
 
@@ -78,7 +78,7 @@ func GetUsers() *[]User {
 	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/um/controller/1.0/users", nil)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 
-	resp, _ := client.Do(req)
+	resp, _ := nerveCentreHttpClient.Do(req)
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
@@ -94,7 +94,7 @@ func GetSchedules() *[]Schedule {
 	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/reachability/controller/1.0/groups/config/schedules", nil)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 
-	resp, _ := client.Do(req)
+	resp, _ := nerveCentreHttpClient.Do(req)
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
@@ -112,7 +112,7 @@ func GetPlanning(schedule Schedule, date time.Time) *Planning {
 	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/reachability/controller/1.0/groups/"+schedule.GroupId+"/config/"+schedule.ParameterId+"/schedule/"+dateString, nil)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 
-	resp, _ := client.Do(req)
+	resp, _ := nerveCentreHttpClient.Do(req)
 
 	body, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()

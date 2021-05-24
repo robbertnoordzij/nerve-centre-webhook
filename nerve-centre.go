@@ -6,6 +6,7 @@ import (
 	"flag"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -16,7 +17,10 @@ func main() {
 	webhookUrl := flag.String("webhook", "", "Slack webhook url")
 	flag.Parse()
 
-	InitializeClient()
+	if *username == "" || *password == "" || *webhookUrl == "" {
+		flag.Usage()
+		syscall.Exit(1)
+	}
 
 	err := Login(*username, *password)
 
