@@ -15,6 +15,7 @@ func main() {
 	username := flag.String("username", "", "Nerve Centre username")
 	password := flag.String("password", "", "Nerve Centre password")
 	webhookUrl := flag.String("webhook", "", "Slack webhook url")
+	channel := flag.String("channel", "", "Slack channel override")
 	flag.Parse()
 
 	if *username == "" || *password == "" || *webhookUrl == "" {
@@ -122,6 +123,7 @@ func main() {
 
 	message := SlackPayload{
 		Username:    "📞 Wachtdienst " + schedule.GroupName,
+		Channel: 	 *channel,
 		Text:        "Een overzicht van de de huidige wachtdiensten die zijn ingeregeld voor " + schedule.GroupName + " in Nerve Centre",
 		Attachments: attachments,
 	}
