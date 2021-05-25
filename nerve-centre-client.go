@@ -136,23 +136,17 @@ func (planning *Planning) HasMembers() bool {
 	return false
 }
 
-func (planning *Planning) GetEnd() time.Time {
-	var end time.Time
-
+func (planning *Planning) GetActiveSlot(time time.Time) *Slot {
 	for _, slot := range planning.BaseTimeSlots {
-		if len(slot.Members) > 0 {
-			end = slot.End
+		if (slot.Start.Before(time) || slot.Start.Equal(time)) && slot.End.After(time) {
+			return &slot
 		}
 	}
 
-	return end
+	return nil
 }
 
-func (planning *Planning) GetStart() time.Time {
-	return planning.BaseTimeSlots[0].Start
-}
-
-func (planning *Planning) GetMembers(users *[]User) []string {
+func (slot *Slot) GetMembers(users *[]User) []string {
 	index := make(map[string]string)
 
 	for _, user := range *users {
@@ -161,11 +155,8 @@ func (planning *Planning) GetMembers(users *[]User) []string {
 
 	members := make(map[string]struct{})
 
-	for _, slot := range planning.BaseTimeSlots {
-
-		for _, member := range slot.Members {
-			members[index[member]] = struct{}{}
-		}
+	for _, member := range slot.Members {
+		members[index[member]] = struct{}{}
 	}
 
 	keys := make([]string, 0, len(members))

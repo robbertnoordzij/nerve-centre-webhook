@@ -180,213 +180,6 @@ func TestLogin(t *testing.T) {
 	}
 }
 
-func TestPlanning_GetEnd(t *testing.T) {
-	type fields struct {
-		BaseTimeSlots    []Slot
-		PrimaryTimeSlots []Slot
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   time.Time
-	}{
-		{
-			name: "Single Slot",
-			fields: fields{
-				BaseTimeSlots: []Slot{
-					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"alice", "bob",
-						},
-					},
-				},
-			},
-			want: time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
-		},
-		{
-			name: "Double Slot",
-			fields: fields{
-				BaseTimeSlots: []Slot{
-					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"alice", "bob",
-						},
-					},
-					{
-						Start: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"alice", "bob",
-						},
-					},
-				},
-			},
-			want: time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			planning := &Planning{
-				BaseTimeSlots:    tt.fields.BaseTimeSlots,
-				PrimaryTimeSlots: tt.fields.PrimaryTimeSlots,
-			}
-			if got := planning.GetEnd(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetEnd() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPlanning_GetMembers(t *testing.T) {
-	type fields struct {
-		BaseTimeSlots    []Slot
-		PrimaryTimeSlots []Slot
-	}
-	type args struct {
-		users *[]User
-	}
-	users := &[]User{
-		{
-			Id: "1",
-			Name: "Alice",
-		},
-		{
-			Id: "2",
-			Name: "Bob",
-		},
-		{
-			Id: "3",
-			Name: "Clare",
-		},
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []string
-	}{
-		{
-			name: "Single Slot",
-			args: args{
-				users: users,
-			},
-			fields: fields{
-				BaseTimeSlots: []Slot{
-					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"1",
-						},
-					},
-				},
-			},
-			want: []string{"Alice"},
-		},
-		{
-			name: "Double Slot",
-			args: args{
-				users: users,
-			},
-			fields: fields{
-				BaseTimeSlots: []Slot{
-					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"1", "2",
-						},
-					},
-					{
-						Start: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"2", "3",
-						},
-					},
-				},
-			},
-			want: []string{"Alice", "Bob", "Clare"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			planning := &Planning{
-				BaseTimeSlots:    tt.fields.BaseTimeSlots,
-				PrimaryTimeSlots: tt.fields.PrimaryTimeSlots,
-			}
-			if got := planning.GetMembers(tt.args.users); !sameStringSlice(got, tt.want) {
-				t.Errorf("GetMembers() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestPlanning_GetStart(t *testing.T) {
-	type fields struct {
-		BaseTimeSlots    []Slot
-		PrimaryTimeSlots []Slot
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   time.Time
-	}{
-		{
-			name: "Single Slot",
-			fields: fields{
-				BaseTimeSlots: []Slot{
-					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"1",
-						},
-					},
-				},
-			},
-			want: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-		},
-		{
-			name: "Double Slot",
-			fields: fields{
-				BaseTimeSlots: []Slot{
-					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"1", "2",
-						},
-					},
-					{
-						Start: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
-						Members: []string{
-							"2", "3",
-						},
-					},
-				},
-			},
-			want: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			planning := &Planning{
-				BaseTimeSlots:    tt.fields.BaseTimeSlots,
-				PrimaryTimeSlots: tt.fields.PrimaryTimeSlots,
-			}
-			if got := planning.GetStart(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetStart() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
 func TestPlanning_HasMembers(t *testing.T) {
 	type fields struct {
 		BaseTimeSlots    []Slot
@@ -439,8 +232,8 @@ func TestPlanning_HasMembers(t *testing.T) {
 			fields: fields{
 				BaseTimeSlots: []Slot{
 					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+						Start:   time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+						End:     time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
 						Members: []string{},
 					},
 				},
@@ -456,6 +249,169 @@ func TestPlanning_HasMembers(t *testing.T) {
 			}
 			if got := planning.HasMembers(); got != tt.want {
 				t.Errorf("HasMembers() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSlot_GetMembers(t *testing.T) {
+	type args struct {
+		users *[]User
+	}
+	users := &[]User{
+		{
+			Id:   "1",
+			Name: "Alice",
+		},
+		{
+			Id:   "2",
+			Name: "Bob",
+		},
+		{
+			Id:   "3",
+			Name: "Clare",
+		},
+	}
+	tests := []struct {
+		name   string
+		fields Slot
+		args   args
+		want   []string
+	}{
+		{
+			name: "Single Slot",
+			args: args{
+				users: users,
+			},
+			fields: Slot{
+				Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+				Members: []string{
+					"1",
+				},
+			},
+			want: []string{"Alice"},
+		},
+		{
+			name: "Double Slot",
+			args: args{
+				users: users,
+			},
+			fields: Slot{
+				Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+				Members: []string{
+					"1", "2",
+				},
+			},
+			want: []string{"Alice", "Bob"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.fields.GetMembers(tt.args.users); !sameStringSlice(got, tt.want) {
+				t.Errorf("GetMembers() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestPlanning_GetActiveSlot(t *testing.T) {
+	type fields struct {
+		BaseTimeSlots    []Slot
+		PrimaryTimeSlots []Slot
+	}
+	type args struct {
+		time time.Time
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *Slot
+	}{
+		{
+			name: "Outside of Slot",
+			args: args{
+				time: time.Date(2021, 1, 3, 0, 0, 0, 0, time.UTC),
+			},
+			fields: fields{
+				BaseTimeSlots: []Slot{
+					{
+						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+						Members: []string{
+							"1",
+						},
+					},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "Single Slot",
+			args: args{
+				time: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			fields: fields{
+				BaseTimeSlots: []Slot{
+					{
+						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+						Members: []string{
+							"1",
+						},
+					},
+				},
+			},
+			want: &Slot{
+				Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+				Members: []string{
+					"1",
+				},
+			},
+		},
+		{
+			name: "Double Slot",
+			args: args{
+				time: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+			},
+			fields: fields{
+				BaseTimeSlots: []Slot{
+					{
+						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+						Members: []string{
+							"1", "2",
+						},
+					},
+					{
+						Start: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+						End:   time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
+						Members: []string{
+							"2", "3",
+						},
+					},
+				},
+			},
+			want: &Slot{
+				Start: time.Date(2021, 1, 2, 0, 0, 0, 0, time.UTC),
+				End:   time.Date(2021, 1, 2, 23, 59, 59, 0, time.UTC),
+				Members: []string{
+					"2", "3",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			planning := &Planning{
+				BaseTimeSlots:    tt.fields.BaseTimeSlots,
+				PrimaryTimeSlots: tt.fields.PrimaryTimeSlots,
+			}
+			if got := planning.GetActiveSlot(tt.args.time); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetActiveSlot() = %v, want %v", got, tt.want)
 			}
 		})
 	}
