@@ -1,5 +1,5 @@
 # nerve-centre-webhook
-Simple webhook to Slack to push the schedule defined in Nerve Centre
+A simple applicatation to push the schedule defined in Nerve Centre to a Slack webhook.
 
 ## Usage
 
