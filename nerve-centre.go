@@ -38,6 +38,7 @@ func main() {
 
 	schedule := schedules[0]
 
+	runTime := time.Now()
 	planningTime := time.Now()
 	planningEnd := time.Now()
 	planning := GetPlanning(schedule, planningTime)
@@ -58,6 +59,12 @@ func main() {
 	for planning.HasMembers() {
 
 		for _, slot := range planning.BaseTimeSlots{
+
+			// Filter current active slot and older slots
+			if runTime.After(slot.Start) || runTime.Equal(slot.Start) {
+				continue
+			}
+
 			planningEnd = slot.End
 
 			if !foundOther {
@@ -79,7 +86,7 @@ func main() {
 	todayMembersString := "<<geen>>"
 	todayColor := "#ec0045"
 	if len(currentMembers) > 0 {
-		todayMembersString = strings.Join(currentMembers, ", ") + " tot " + currentPlanningEnd.Format("02-01-2006T15:04Z")
+		todayMembersString = strings.Join(currentMembers, ", ") + " tot " + currentPlanningEnd.Format("02-01-2006 15:04")
 		todayColor = "#007a5a"
 	}
 
@@ -98,7 +105,7 @@ func main() {
 		nextColor := "#ec0045"
 
 		if len(currentMembers) > 0 {
-			nextMembersString = strings.Join(nextMembers, ", ") + " om " + next.Start.Format("02-01-2006T15:04Z")
+			nextMembersString = strings.Join(nextMembers, ", ") + " op " + next.Start.Format("02-01-2006 om 15:04")
 			nextColor = "#ffc917"
 		}
 
@@ -113,10 +120,10 @@ func main() {
 
 	if len(today.GetMembers(users)) > 0 {
 		attachments = append(attachments, Attachment{
-			Fallback: "Er is een rooster tot " + planningEnd.Format("02-01-2006T15:04Z"),
+			Fallback: "Er is een rooster tot " + planningEnd.Format("02-01-2006 15:04"),
 			Color:    "#ec0045",
 			Title:    "Einde rooster",
-			Text:     "Er is een rooster tot " + planningEnd.Format("02-01-2006T15:04Z"),
+			Text:     "Er is een rooster tot " + planningEnd.Format("02-01-2006 15:04"),
 			Ts:       json.Number(strconv.FormatInt(planningEnd.Unix(), 10)),
 		})
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"4d63.com/tz"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
@@ -50,7 +51,6 @@ func init() {
 }
 
 func Login(username string, password string) error {
-
 	if len(username) == 0 || len(password) == 0 {
 		return fmt.Errorf("username or password is not provided")
 	}
@@ -121,12 +121,42 @@ func GetPlanning(schedule Schedule, date time.Time) *Planning {
 
 	json.Unmarshal(body, &planning)
 
+	fixTimeZoneForPlanning(&planning)
+
 	return &planning
+}
+
+func fixTimeZoneForPlanning(planning *Planning) {
+	for i, _ := range planning.BaseTimeSlots {
+		slot := &planning.BaseTimeSlots[i]
+		slot.Start = fixTimeZone(slot.Start)
+		slot.End = fixTimeZone(slot.End)
+	}
+	for i, _ := range planning.PrimaryTimeSlots {
+		slot := &planning.PrimaryTimeSlots[i]
+		slot.Start = fixTimeZone(slot.Start)
+		slot.End = fixTimeZone(slot.End)
+	}
+}
+
+func fixTimeZone(toFix time.Time) time.Time {
+	loc, _ := tz.LoadLocation("Europe/Amsterdam")
+
+	// Nerve Centre has the nerve to communicate local times as if they were Zulu, so we have to update te location
+	return time.Date(
+		toFix.Year(),
+		toFix.Month(),
+		toFix.Day(),
+		toFix.Hour(),
+		toFix.Minute(),
+		toFix.Second(),
+		0,
+		loc,
+	)
 }
 
 
 func (planning *Planning) HasMembers() bool {
-
 	for _, slot := range planning.BaseTimeSlots {
 		if len(slot.Members) > 0 {
 			return true

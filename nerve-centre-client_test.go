@@ -1,6 +1,7 @@
 package main
 
 import (
+	"4d63.com/tz"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -10,12 +11,14 @@ import (
 )
 
 func TestGetPlanning(t *testing.T) {
+	loc, _ := tz.LoadLocation("Europe/Amsterdam")
 	type args struct {
 		schedule Schedule
 		date     time.Time
 	}
 	tests := []struct {
 		name string
+		json string
 		args args
 		want *Planning
 	}{
@@ -29,13 +32,40 @@ func TestGetPlanning(t *testing.T) {
 				},
 				date: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
+			json: `
+			{
+			  "enableManualPlanning": false,
+			  "enablePrimarySchedule": true,
+			  "predefinedTimeSlots": [
+				{
+				  "start": "2021-05-31T00:00:00Z",
+				  "end": "2021-06-01T00:00:00Z",
+				  "minMembers": 1,
+				  "maxMembers": 2
+				}
+			  ],
+			  "baseTimeSlots": [
+				{
+				  "members": [
+					"a9f656bf-85af-415b-807c-81728f255f03"
+				  ],
+				  "start": "2021-05-31T00:00:00Z",
+				  "end": "2021-06-01T00:00:00Z",
+				  "minMembers": 1,
+				  "maxMembers": 2
+				}
+			  ],
+			  "primaryTimeSlots": []
+			}
+`,
 			want: &Planning{
+				PrimaryTimeSlots: []Slot{},
 				BaseTimeSlots: []Slot{
 					{
-						Start: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
-						End:   time.Date(2021, 1, 1, 23, 59, 59, 0, time.UTC),
+						Start: time.Date(2021, 5, 31, 0, 0, 0, 0, loc),
+						End:   time.Date(2021, 6, 1, 0, 0, 0, 0, loc),
 						Members: []string{
-							"alice", "bob",
+							"a9f656bf-85af-415b-807c-81728f255f03",
 						},
 					},
 				},
@@ -45,9 +75,8 @@ func TestGetPlanning(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				body, _ := json.Marshal(tt.want)
 				w.WriteHeader(http.StatusOK)
-				w.Write(body)
+				w.Write([]byte(tt.json))
 			}))
 			defer ts.Close()
 			nerveCentreBaseUrl = ts.URL
