@@ -18,8 +18,10 @@ func TestGetPlanning(t *testing.T) {
 	}
 	tests := []struct {
 		name string
+		status int
 		json string
 		args args
+		wantErr bool
 		want *Planning
 	}{
 		{
@@ -32,6 +34,7 @@ func TestGetPlanning(t *testing.T) {
 				},
 				date: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
+			status: http.StatusOK,
 			json: `
 			{
 			  "enableManualPlanning": false,
@@ -58,6 +61,7 @@ func TestGetPlanning(t *testing.T) {
 			  "primaryTimeSlots": []
 			}
 `,
+			wantErr: false,
 			want: &Planning{
 				PrimaryTimeSlots: []Slot{},
 				BaseTimeSlots: []Slot{
@@ -71,17 +75,39 @@ func TestGetPlanning(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "Planning for Schedule returns error",
+			args: args{
+				schedule: Schedule{
+					GroupName:   "GroupName",
+					ParameterId: "P1",
+					GroupId:     "G1",
+				},
+				date: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			status: http.StatusInternalServerError,
+			json: "",
+			wantErr: true,
+			want: nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
+				w.WriteHeader(tt.status)
 				w.Write([]byte(tt.json))
 			}))
 			defer ts.Close()
 			nerveCentreBaseUrl = ts.URL
-			if got := GetPlanning(tt.args.schedule, tt.args.date); !reflect.DeepEqual(got, tt.want) {
+
+			got, err := GetPlanning(tt.args.schedule, tt.args.date)
+
+			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("GetPlanning() = %v, want %v", got, tt.want)
+			}
+
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetPlanning() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
 	}

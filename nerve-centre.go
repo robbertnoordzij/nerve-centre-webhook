@@ -26,14 +26,14 @@ func main() {
 	err := Login(*username, *password)
 
 	if err != nil {
-		panic(err)
+		sendFailureToSlack(webhookUrl, Schedule{}, channel, err)
 	}
 
 	users := GetUsers()
 	schedules := *GetSchedules()
 
 	if len(*users) == 0 || len(schedules) == 0 {
-		panic(errors.New("could not load users or schedules, check username and password"))
+		sendFailureToSlack(webhookUrl, Schedule{}, channel, errors.New("could not load users or schedules, check username and password"))
 	}
 
 	schedule := schedules[0]
@@ -41,7 +41,12 @@ func main() {
 	runTime := time.Now()
 	planningTime := time.Now()
 	planningEnd := time.Now()
-	planning := GetPlanning(schedule, planningTime)
+	planning, err := GetPlanning(schedule, planningTime)
+
+	if err != nil {
+		sendFailureToSlack(webhookUrl, schedule, channel, err)
+	}
+
 	today := planning.GetActiveSlot(planningTime)
 	var next *Slot
 
@@ -58,7 +63,7 @@ func main() {
 
 	for planning.HasMembers() {
 
-		for _, slot := range planning.BaseTimeSlots{
+		for _, slot := range planning.BaseTimeSlots {
 
 			// Filter current active slot and older slots
 			if runTime.After(slot.Start) || runTime.Equal(slot.Start) {
@@ -70,17 +75,20 @@ func main() {
 			if !foundOther {
 				members := slot.GetMembers(users)
 
+				currentPlanningEnd = slot.End
+
 				if !Equal(currentMembers, members) {
 					foundOther = true
 					next = &slot
-				} else {
-					currentPlanningEnd = slot.End
 				}
 			}
 		}
 
 		planningTime = planningTime.Add(24 * time.Hour)
-		planning = GetPlanning(schedule, planningTime)
+		planning, err = GetPlanning(schedule, planningTime)
+		if err != nil {
+			sendFailureToSlack(webhookUrl, schedule, channel, err)
+		}
 	}
 
 	todayMembersString := "<<geen>>"
@@ -130,14 +138,23 @@ func main() {
 
 	message := SlackPayload{
 		Username:    "📞 Wachtdienst " + schedule.GroupName,
-		Channel: 	 *channel,
+		Channel:     *channel,
 		Text:        "Een overzicht van de de huidige wachtdiensten die zijn ingeregeld voor " + schedule.GroupName + " in Nerve Centre",
 		Attachments: attachments,
 	}
 
 	err = SendSlack(*webhookUrl, &message)
-
 	if err != nil {
 		panic(err)
 	}
 }
+
+func sendFailureToSlack(webhookUrl *string, schedule Schedule, channel *string, err error) {
+	SendSlack(*webhookUrl, &SlackPayload{
+		Username: "⚠️ Wachtdienst " + schedule.GroupName,
+		Channel:  *channel,
+		Text:     "Kon wachtdiensten niet ophalen uit Nerve Centre: " + err.Error(),
+	})
+	panic(err)
+}
+

@@ -106,7 +106,7 @@ func GetSchedules() *[]Schedule {
 	return &schedules
 }
 
-func GetPlanning(schedule Schedule, date time.Time) *Planning {
+func GetPlanning(schedule Schedule, date time.Time) (*Planning, error) {
 	dateString := date.Format("2006-01-02")
 
 	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/reachability/controller/1.0/groups/"+schedule.GroupId+"/config/"+schedule.ParameterId+"/schedule/"+dateString, nil)
@@ -117,13 +117,17 @@ func GetPlanning(schedule Schedule, date time.Time) *Planning {
 	body, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("failed to retrieve planning for %s, Nerve Centre returned %d", dateString, resp.StatusCode)
+	}
+
 	var planning Planning
 
 	json.Unmarshal(body, &planning)
 
 	fixTimeZoneForPlanning(&planning)
 
-	return &planning
+	return &planning, nil
 }
 
 func fixTimeZoneForPlanning(planning *Planning) {
@@ -177,6 +181,10 @@ func (planning *Planning) GetActiveSlot(time time.Time) *Slot {
 }
 
 func (slot *Slot) GetMembers(users *[]User) []string {
+	if slot == nil {
+		return make([]string, 0, 0)
+	}
+
 	index := make(map[string]string)
 
 	for _, user := range *users {
