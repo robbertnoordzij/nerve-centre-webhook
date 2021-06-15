@@ -41,20 +41,20 @@ func main() {
 	runTime := time.Now()
 	planningTime := time.Now()
 	planningEnd := time.Now()
-	planning, err := GetPlanning(schedule, planningTime)
+	planning, err := GetPlanning(schedule, runTime)
 
 	if err != nil {
 		sendFailureToSlack(webhookUrl, schedule, channel, err)
 	}
 
-	today := planning.GetActiveSlot(planningTime)
+	today := planning.GetActiveSlot(runTime)
 	var next *Slot
 
 	var currentPlanningEnd time.Time
 	var currentMembers []string
 
 	if planning.HasMembers() {
-		slot := planning.GetActiveSlot(planningTime)
+		slot := planning.GetActiveSlot(runTime)
 		currentPlanningEnd = slot.End
 		currentMembers = slot.GetMembers(users)
 	}
@@ -75,11 +75,11 @@ func main() {
 			if !foundOther {
 				members := slot.GetMembers(users)
 
-				currentPlanningEnd = slot.End
-
 				if !Equal(currentMembers, members) {
 					foundOther = true
 					next = &slot
+				} else {
+					currentPlanningEnd = slot.End
 				}
 			}
 		}
