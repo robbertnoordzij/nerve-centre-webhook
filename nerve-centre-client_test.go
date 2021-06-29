@@ -17,12 +17,12 @@ func TestGetPlanning(t *testing.T) {
 		date     time.Time
 	}
 	tests := []struct {
-		name string
-		status int
-		json string
-		args args
+		name    string
+		status  int
+		json    string
+		args    args
 		wantErr bool
-		want *Planning
+		want    *Planning
 	}{
 		{
 			name: "Planning for Schedule",
@@ -85,10 +85,10 @@ func TestGetPlanning(t *testing.T) {
 				},
 				date: time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC),
 			},
-			status: http.StatusInternalServerError,
-			json: "",
+			status:  http.StatusInternalServerError,
+			json:    "",
 			wantErr: true,
-			want: nil,
+			want:    nil,
 		},
 	}
 	for _, tt := range tests {
@@ -222,7 +222,8 @@ func TestLogin(t *testing.T) {
 				if tt.wantErr {
 					w.WriteHeader(http.StatusForbidden)
 				} else {
-					w.WriteHeader(http.StatusOK)
+					w.Header().Set("Location", nerveCentreBaseUrl + "?ReturnUrl=~%2f&State=1234567890")
+					w.WriteHeader(http.StatusFound)
 				}
 			}))
 			defer ts.Close()

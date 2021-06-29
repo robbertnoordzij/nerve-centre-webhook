@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-var nerveCentreBaseUrl = "https://portal.ncaas.nl/2020-2"
+var nerveCentreBaseUrl = "https://portal.ncaas.nl/"
 
 type User struct {
 	Id   string
@@ -45,8 +45,11 @@ func init() {
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 		},
-		Timeout: 10 * time.Second,
-		Jar:     jar,
+		Timeout: 60 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+		Jar: jar,
 	}
 }
 
@@ -60,14 +63,46 @@ func Login(username string, password string) error {
 
 	form := url.Values{}
 	form.Add("username", username)
-	form.Add("password", password)
+	form.Add("redirectUri", nerveCentreBaseUrl+"/login.cshtml?ReturnUrl=~%2f")
+	form.Add("promptBehavior", "Auto")
 
-	req, _ = http.NewRequest("POST", nerveCentreBaseUrl+"/login.cshtml?ReturnUrl=~%2f", strings.NewReader(form.Encode()))
+	req, _ = http.NewRequest("POST", nerveCentreBaseUrl+"/vui/controller/1.0/login", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	resp, _ := nerveCentreHttpClient.Do(req)
 
-	if resp.StatusCode != http.StatusOK {
+	if resp.StatusCode != http.StatusFound {
+		return fmt.Errorf("failed to login, Nerve Centre returned %d", resp.StatusCode)
+	}
+
+	locationHeader := resp.Header.Get("Location")
+
+	stateIndex := strings.LastIndex(locationHeader, "&State=") + 7
+
+	state, _ := url.QueryUnescape(locationHeader[stateIndex:])
+
+	form = url.Values{}
+	form.Add("password", password)
+	form.Add("redirectUri", locationHeader)
+	form.Add("promptBehavior", "Auto")
+	form.Add("state", state)
+
+	req, _ = http.NewRequest("POST", nerveCentreBaseUrl+"/vui/controller/1.0/login/credentials", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, _ = nerveCentreHttpClient.Do(req)
+
+	if resp.StatusCode != http.StatusFound {
+		return fmt.Errorf("failed to login, Nerve Centre returned %d", resp.StatusCode)
+	}
+
+	locationHeader = resp.Header.Get("Location")
+
+	req, _ = http.NewRequest("GET", locationHeader, nil)
+
+	resp, _ = nerveCentreHttpClient.Do(req)
+
+	if resp.StatusCode != http.StatusFound {
 		return fmt.Errorf("failed to login, Nerve Centre returned %d", resp.StatusCode)
 	}
 
@@ -158,7 +193,6 @@ func fixTimeZone(toFix time.Time) time.Time {
 		loc,
 	)
 }
-
 
 func (planning *Planning) HasMembers() bool {
 	for _, slot := range planning.BaseTimeSlots {

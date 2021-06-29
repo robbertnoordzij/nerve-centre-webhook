@@ -14,16 +14,21 @@ func main() {
 
 	username := flag.String("username", "", "Nerve Centre username")
 	password := flag.String("password", "", "Nerve Centre password")
+	namespace := flag.String("namespace", "", "Nerve Centre namespace")
 	webhookUrl := flag.String("webhook", "", "Slack webhook url")
 	channel := flag.String("channel", "", "Slack channel override")
 	flag.Parse()
 
-	if *username == "" || *password == "" || *webhookUrl == "" {
+	if *username == "" || *password == "" || *namespace == "" || *webhookUrl == "" {
 		flag.Usage()
 		syscall.Exit(1)
 	}
 
-	err := Login(*username, *password)
+	// Apply namespace
+	nerveCentreBaseUrl = nerveCentreBaseUrl + *namespace
+	usernameWithNamespace := *username + "@" + *namespace
+
+	err := Login(usernameWithNamespace, *password)
 
 	if err != nil {
 		sendFailureToSlack(webhookUrl, Schedule{}, channel, err)
@@ -157,4 +162,3 @@ func sendFailureToSlack(webhookUrl *string, schedule Schedule, channel *string, 
 	})
 	panic(err)
 }
-
