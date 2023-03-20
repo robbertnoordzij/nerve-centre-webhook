@@ -154,8 +154,9 @@ func TestGetUsers(t *testing.T) {
 			"Single User",
 			&[]User{
 				{
-					Id:   "1",
-					Name: "alice",
+					Id:        "1",
+					FirstName: "alice",
+					LastName:  "",
 				},
 			},
 		},
@@ -163,12 +164,14 @@ func TestGetUsers(t *testing.T) {
 			"Two Users",
 			&[]User{
 				{
-					Id:   "1",
-					Name: "alice",
+					Id:        "1",
+					FirstName: "alice",
+					LastName:  "",
 				},
 				{
-					Id:   "2",
-					Name: "bob",
+					Id:        "2",
+					FirstName: "bob",
+					LastName:  "",
 				},
 			},
 		},
@@ -222,7 +225,7 @@ func TestLogin(t *testing.T) {
 				if tt.wantErr {
 					w.WriteHeader(http.StatusForbidden)
 				} else {
-					w.Header().Set("Location", nerveCentreBaseUrl + "?ReturnUrl=~%2f&State=1234567890")
+					w.Header().Set("Location", nerveCentreBaseUrl+"?ReturnUrl=~%2f&State=1234567890")
 					w.WriteHeader(http.StatusFound)
 				}
 			}))
@@ -316,16 +319,19 @@ func TestSlot_GetMembers(t *testing.T) {
 	}
 	users := &[]User{
 		{
-			Id:   "1",
-			Name: "Alice",
+			Id:        "1",
+			FirstName: "Alice",
+			LastName:  "",
 		},
 		{
-			Id:   "2",
-			Name: "Bob",
+			Id:        "2",
+			FirstName: "Bob",
+			LastName:  "",
 		},
 		{
-			Id:   "3",
-			Name: "Clare",
+			Id:        "3",
+			FirstName: "Clare",
+			LastName:  "",
 		},
 	}
 	tests := []struct {

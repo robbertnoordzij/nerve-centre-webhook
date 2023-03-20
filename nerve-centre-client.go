@@ -16,8 +16,9 @@ import (
 var nerveCentreBaseUrl = "https://portal.ncaas.nl/"
 
 type User struct {
-	Id   string
-	Name string
+	Id        string
+	FirstName string
+	LastName  string
 }
 
 type Schedule struct {
@@ -222,7 +223,7 @@ func (slot *Slot) GetMembers(users *[]User) []string {
 	index := make(map[string]string)
 
 	for _, user := range *users {
-		index[user.Id] = user.Name
+		index[user.Id] = strings.TrimSpace(user.FirstName + " " + user.LastName)
 	}
 
 	members := make(map[string]struct{})
