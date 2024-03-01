@@ -34,7 +34,7 @@ func main() {
 		sendFailureToSlack(webhookUrl, Schedule{}, channel, err)
 	}
 
-	users := GetUsers()
+	users := GetMembers()
 	schedules := *GetSchedules()
 
 	if len(*users) == 0 || len(schedules) == 0 {

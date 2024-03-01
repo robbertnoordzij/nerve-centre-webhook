@@ -15,10 +15,17 @@ import (
 
 var nerveCentreBaseUrl = "https://portal.ncaas.nl/"
 
-type User struct {
-	Id        string
-	FirstName string
-	LastName  string
+type ScheduleConfig struct {
+	GroupId string
+}
+
+type Group struct {
+	Members []Member
+}
+
+type Member struct {
+	UserId string
+	Name   string
 }
 
 type Schedule struct {
@@ -110,8 +117,9 @@ func Login(username string, password string) error {
 	return nil
 }
 
-func GetUsers() *[]User {
-	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/um/controller/1.0/users", nil)
+func GetMembers() *[]Member {
+
+	req, _ := http.NewRequest("GET", nerveCentreBaseUrl+"/reachability/controller/1.0/groups/config/schedules", nil)
 	req.Header.Set("Accept", "application/json, text/plain, */*")
 
 	resp, _ := nerveCentreHttpClient.Do(req)
@@ -119,11 +127,23 @@ func GetUsers() *[]User {
 	body, _ := ioutil.ReadAll(resp.Body)
 	defer resp.Body.Close()
 
-	var users []User
+	var scheduleConfigs []ScheduleConfig
 
-	json.Unmarshal(body, &users)
+	json.Unmarshal(body, &scheduleConfigs)
 
-	return &users
+	req, _ = http.NewRequest("GET", nerveCentreBaseUrl+"/um/controller/1.0/groups/"+scheduleConfigs[0].GroupId, nil)
+	req.Header.Set("Accept", "application/json, text/plain, */*")
+
+	resp, _ = nerveCentreHttpClient.Do(req)
+
+	body, _ = ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	var group Group
+
+	json.Unmarshal(body, &group)
+
+	return &group.Members
 }
 
 func GetSchedules() *[]Schedule {
@@ -215,7 +235,7 @@ func (planning *Planning) GetActiveSlot(time time.Time) *Slot {
 	return nil
 }
 
-func (slot *Slot) GetMembers(users *[]User) []string {
+func (slot *Slot) GetMembers(users *[]Member) []string {
 	if slot == nil {
 		return make([]string, 0, 0)
 	}
@@ -223,7 +243,7 @@ func (slot *Slot) GetMembers(users *[]User) []string {
 	index := make(map[string]string)
 
 	for _, user := range *users {
-		index[user.Id] = strings.TrimSpace(user.FirstName + " " + user.LastName)
+		index[user.UserId] = strings.TrimSpace(user.Name)
 	}
 
 	members := make(map[string]struct{})

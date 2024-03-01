@@ -148,30 +148,27 @@ func TestGetSchedules(t *testing.T) {
 func TestGetUsers(t *testing.T) {
 	tests := []struct {
 		name string
-		want *[]User
+		want *[]Member
 	}{
 		{
-			"Single User",
-			&[]User{
+			"Single Member",
+			&[]Member{
 				{
-					Id:        "1",
-					FirstName: "alice",
-					LastName:  "",
+					UserId: "1",
+					Name:   "alice",
 				},
 			},
 		},
 		{
 			"Two Users",
-			&[]User{
+			&[]Member{
 				{
-					Id:        "1",
-					FirstName: "alice",
-					LastName:  "",
+					UserId: "1",
+					Name:   "alice",
 				},
 				{
-					Id:        "2",
-					FirstName: "bob",
-					LastName:  "",
+					UserId: "2",
+					Name:   "bob",
 				},
 			},
 		},
@@ -185,8 +182,8 @@ func TestGetUsers(t *testing.T) {
 			}))
 			defer ts.Close()
 			nerveCentreBaseUrl = ts.URL
-			if got := GetUsers(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetUsers() = %v, want %v", got, tt.want)
+			if got := GetMembers(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetMembers() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -315,23 +312,20 @@ func TestPlanning_HasMembers(t *testing.T) {
 
 func TestSlot_GetMembers(t *testing.T) {
 	type args struct {
-		users *[]User
+		users *[]Member
 	}
-	users := &[]User{
+	users := &[]Member{
 		{
-			Id:        "1",
-			FirstName: "Alice",
-			LastName:  "",
+			UserId: "1",
+			Name:   "Alice",
 		},
 		{
-			Id:        "2",
-			FirstName: "Bob",
-			LastName:  "",
+			UserId: "2",
+			Name:   "Bob",
 		},
 		{
-			Id:        "3",
-			FirstName: "Clare",
-			LastName:  "",
+			UserId: "3",
+			Name:   "Clare",
 		},
 	}
 	tests := []struct {
